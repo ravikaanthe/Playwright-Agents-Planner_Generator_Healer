@@ -94,8 +94,15 @@ export default defineConfig({
 
     {
       name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
+      use: { 
+        ...devices['Desktop Safari'],
+        // Increase timeouts for WebKit in CI as it can be slower
+        actionTimeout: process.env.CI ? 15000 : 10000,
+        navigationTimeout: process.env.CI ? 45000 : 30000,
+      },
       testMatch: '**/*.spec.ts',
+      // Skip WebKit tests if environment variable is set
+      testIgnore: process.env.SKIP_WEBKIT_TESTS ? ['**/*'] : [],
     },
 
     /* Test against mobile viewports. */

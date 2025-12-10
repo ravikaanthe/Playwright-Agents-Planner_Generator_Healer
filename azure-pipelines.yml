@@ -187,6 +187,14 @@ stages:
               failTaskOnFailedTests: false
               testRunTitle: 'Firefox Tests'
 
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Firefox HTML Report'
+            condition: always()
+            inputs:
+              pathtoPublish: '$(playwrightReportPath)'
+              artifactName: 'firefox-html-report'
+              publishLocation: 'Container'
+
           - task: PublishPipelineArtifact@1
             displayName: 'Publish Firefox Artifacts'
             condition: always()
@@ -242,6 +250,14 @@ stages:
               mergeTestResults: true
               failTaskOnFailedTests: false
               testRunTitle: 'WebKit Tests'
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish WebKit HTML Report'
+            condition: always()
+            inputs:
+              pathtoPublish: '$(playwrightReportPath)'
+              artifactName: 'webkit-html-report'
+              publishLocation: 'Container'
 
           - task: PublishPipelineArtifact@1
             displayName: 'Publish WebKit Artifacts'
