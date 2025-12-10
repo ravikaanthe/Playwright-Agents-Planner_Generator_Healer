@@ -120,12 +120,13 @@ stages:
               failTaskOnFailedTests: true
               testRunTitle: 'Chromium Tests'
 
-          - task: PublishHtmlReport@1
-            displayName: 'Publish HTML Report'
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Chromium HTML Report'
             condition: always()
             inputs:
-              reportDir: '$(playwrightReportPath)'
-              tabName: 'Chromium Test Report'
+              pathtoPublish: '$(playwrightReportPath)'
+              artifactName: 'chromium-html-report'
+              publishLocation: 'Container'
 
           - task: PublishPipelineArtifact@1
             displayName: 'Publish Chromium Artifacts'
@@ -314,12 +315,13 @@ stages:
               buildType: 'current'
               targetPath: '$(Pipeline.Workspace)'
 
-          - task: PublishHtmlReport@1
+          - task: PublishBuildArtifacts@1
             displayName: 'Publish Consolidated HTML Report'
             condition: always()
             inputs:
-              reportDir: '$(playwrightReportPath)'
-              tabName: 'Playwright Test Report'
+              pathtoPublish: '$(playwrightReportPath)'
+              artifactName: 'consolidated-html-report'
+              publishLocation: 'Container'
 
           - script: |
               echo "Test execution completed!"
