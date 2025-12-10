@@ -206,7 +206,7 @@ stages:
   - stage: TestWebKit
     displayName: 'Test - WebKit Browser'
     dependsOn: Build
-    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'), eq('false', 'true'))  # Disabled due to instability
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
     jobs:
       - job: WebKitTests
         displayName: 'Run WebKit Tests'
@@ -232,13 +232,27 @@ stages:
           - script: |
               echo "Installing dependencies for WebKit tests..."
               npm ci || (echo "npm ci failed, using npm install..." && rm -f package-lock.json && npm install)
-              npx playwright install webkit
+              # Install system dependencies for WebKit on Linux
+              sudo apt-get update
+              sudo apt-get install -y libwoff1 libopus0 libwebp6 libwebpdemux2 libenchant-2-2 libgudev-1.0-0 libsecret-1-0 libhyphen0 libgdk-pixbuf2.0-0 libegl1 libnotify4 libxss1 libasound2
+              npx playwright install webkit --with-deps
             displayName: 'Install Dependencies and WebKit'
 
           - script: |
+              echo "Running WebKit Tests with enhanced environment..."
+              # Set WebKit-specific environment variables
+              export WEBKIT_HEADLESS=1
+              export WEBKIT_DISABLE_COMPOSITING_DEBUG_VISUALS=1
+              export DEBUG=pw:api
               npm run test:webkit
             displayName: 'Run WebKit Tests'
             continueOnError: true
+            env:
+              # WebKit-specific environment variables
+              WEBKIT_HEADLESS: 1
+              WEBKIT_DISABLE_COMPOSITING_DEBUG_VISUALS: 1
+              # Increase memory limit
+              NODE_OPTIONS: '--max-old-space-size=4096'
 
           - task: PublishTestResults@2
             displayName: 'Publish Test Results'
@@ -320,7 +334,7 @@ stages:
     dependsOn: 
       - TestChromium
       - TestFirefox
-      # TestWebKit disabled due to instability
+      - TestWebKit
     condition: always()
     jobs:
       - job: FinalReport
