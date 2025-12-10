@@ -345,29 +345,146 @@ stages:
           - checkout: self
             displayName: 'Checkout Repository'
 
-          - task: DownloadPipelineArtifact@2
-            displayName: 'Download All Test Results'
+          - task: NodeTool@0
+            displayName: 'Install Node.js'
             inputs:
-              buildType: 'current'
-              targetPath: '$(Pipeline.Workspace)'
+              versionSpec: $(nodeVersion)
 
           - script: |
-              echo "Checking for HTML reports..."
-              if [ -d "playwright-report" ]; then
-                echo "Found playwright-report directory"
-                ls -la playwright-report/
+              echo "Installing dependencies for report generation..."
+              npm ci || (echo "npm ci failed, using npm install..." && rm -f package-lock.json && npm install)
+            displayName: 'Install Dependencies'
+
+          - task: DownloadBuildArtifacts@1
+            displayName: 'Download Chromium HTML Report'
+            continueOnError: true
+            inputs:
+              buildType: 'current'
+              artifactName: 'chromium-html-report'
+              downloadPath: '$(Pipeline.Workspace)/reports'
+
+          - task: DownloadBuildArtifacts@1
+            displayName: 'Download Firefox HTML Report'
+            continueOnError: true
+            inputs:
+              buildType: 'current'
+              artifactName: 'firefox-html-report'
+              downloadPath: '$(Pipeline.Workspace)/reports'
+
+          - task: DownloadBuildArtifacts@1
+            displayName: 'Download WebKit HTML Report'
+            continueOnError: true
+            inputs:
+              buildType: 'current'
+              artifactName: 'webkit-html-report'
+              downloadPath: '$(Pipeline.Workspace)/reports'
+
+          - task: DownloadPipelineArtifact@2
+            displayName: 'Download All Test Results'
+            continueOnError: true
+            inputs:
+              buildType: 'current'
+              targetPath: '$(Pipeline.Workspace)/test-results'
+
+          - script: |
+              echo "Generating consolidated report..."
+              mkdir -p consolidated-report
+              
+              # Create main index page
+              cat > consolidated-report/index.html << 'EOF'
+              <!DOCTYPE html>
+              <html>
+              <head>
+                  <title>Playwright Test Results - All Browsers</title>
+                  <style>
+                      body { font-family: Arial, sans-serif; margin: 40px; }
+                      .header { background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+                      .browser-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+                      .browser-link { display: inline-block; padding: 10px 20px; margin: 5px; background: #007acc; color: white; text-decoration: none; border-radius: 5px; }
+                      .browser-link:hover { background: #005999; }
+                      .status { font-weight: bold; }
+                      .success { color: green; }
+                      .warning { color: orange; }
+                      .error { color: red; }
+                  </style>
+              </head>
+              <body>
+                  <div class="header">
+                      <h1>Playwright Test Results Dashboard</h1>
+                      <p>Build: $BUILD_BUILDNUMBER | Branch: $BUILD_SOURCEBRANCHNAME | Date: $(date)</p>
+                  </div>
+              EOF
+              
+              # Check for each browser report and add links
+              echo "<div class='browser-section'>" >> consolidated-report/index.html
+              echo "<h2>Browser Test Reports</h2>" >> consolidated-report/index.html
+              
+              if [ -d "$(Pipeline.Workspace)/reports/chromium-html-report" ]; then
+                  echo "Found Chromium report"
+                  cp -r "$(Pipeline.Workspace)/reports/chromium-html-report" consolidated-report/chromium
+                  echo "<p><a href='chromium/index.html' class='browser-link'>📊 Chromium Test Report</a> <span class='status success'>✓ Available</span></p>" >> consolidated-report/index.html
               else
-                echo "Creating placeholder report directory"
-                mkdir -p playwright-report
-                echo "<html><body><h1>No reports generated in this run</h1></body></html>" > playwright-report/index.html
+                  echo "<p><span class='browser-link' style='background: #ccc; color: #666;'>📊 Chromium Test Report</span> <span class='status warning'>⚠ Not Available</span></p>" >> consolidated-report/index.html
               fi
-            displayName: 'Prepare Report Directory'
+              
+              if [ -d "$(Pipeline.Workspace)/reports/firefox-html-report" ]; then
+                  echo "Found Firefox report"
+                  cp -r "$(Pipeline.Workspace)/reports/firefox-html-report" consolidated-report/firefox
+                  echo "<p><a href='firefox/index.html' class='browser-link'>🦊 Firefox Test Report</a> <span class='status success'>✓ Available</span></p>" >> consolidated-report/index.html
+              else
+                  echo "<p><span class='browser-link' style='background: #ccc; color: #666;'>🦊 Firefox Test Report</span> <span class='status warning'>⚠ Not Available</span></p>" >> consolidated-report/index.html
+              fi
+              
+              if [ -d "$(Pipeline.Workspace)/reports/webkit-html-report" ]; then
+                  echo "Found WebKit report"
+                  cp -r "$(Pipeline.Workspace)/reports/webkit-html-report" consolidated-report/webkit
+                  echo "<p><a href='webkit/index.html' class='browser-link'>🌐 WebKit Test Report</a> <span class='status success'>✓ Available</span></p>" >> consolidated-report/index.html
+              else
+                  echo "<p><span class='browser-link' style='background: #ccc; color: #666;'>🌐 WebKit Test Report</span> <span class='status warning'>⚠ Not Available</span></p>" >> consolidated-report/index.html
+              fi
+              
+              # Add summary information
+              echo "</div>" >> consolidated-report/index.html
+              echo "<div class='browser-section'>" >> consolidated-report/index.html
+              echo "<h2>Test Results Summary</h2>" >> consolidated-report/index.html
+              
+              # Try to get test summary from JUnit files
+              if [ -d "$(Pipeline.Workspace)/test-results" ]; then
+                  echo "<h3>Test Execution Summary:</h3>" >> consolidated-report/index.html
+                  echo "<ul>" >> consolidated-report/index.html
+                  find "$(Pipeline.Workspace)/test-results" -name "*.xml" | while read xmlfile; do
+                      if [ -f "$xmlfile" ]; then
+                          browser=$(echo "$xmlfile" | grep -o -E "(chromium|firefox|webkit)" | head -1)
+                          echo "<li>$browser: Test results available</li>" >> consolidated-report/index.html
+                      fi
+                  done
+                  echo "</ul>" >> consolidated-report/index.html
+              fi
+              
+              # Close HTML
+              cat >> consolidated-report/index.html << 'EOF'
+                  </div>
+                  <div class="browser-section">
+                      <h2>Additional Information</h2>
+                      <p>Individual browser reports contain detailed test results, screenshots, and traces.</p>
+                      <p>If a browser report is not available, check the pipeline logs for that specific browser stage.</p>
+                  </div>
+              </body>
+              </html>
+              EOF
+              
+              echo "Consolidated report structure:"
+              find consolidated-report -type f | head -20
+            displayName: 'Generate Consolidated Report'
+            env:
+              BUILD_BUILDNUMBER: $(Build.BuildNumber)
+              BUILD_SOURCEBRANCHNAME: $(Build.SourceBranchName)
 
           - task: PublishBuildArtifacts@1
             displayName: 'Publish Consolidated HTML Report'
             condition: always()
             inputs:
-              pathtoPublish: 'playwright-report'
+              pathtoPublish: 'consolidated-report'
               artifactName: 'consolidated-html-report'
               publishLocation: 'Container'
 
