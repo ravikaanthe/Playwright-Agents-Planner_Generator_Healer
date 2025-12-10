@@ -1,0 +1,327 @@
+# Azure DevOps Pipeline for Playwright Tests
+# This pipeline runs Playwright tests on multiple browsers and environments
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+      - feature/*
+  paths:
+    include:
+      - tests/**
+      - playwright.config.ts
+      - package.json
+      - azure-pipelines.yml
+
+pr:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - tests/**
+      - playwright.config.ts
+      - package.json
+
+variables:
+  # Node.js version
+  nodeVersion: '20.x'
+  # Test result paths
+  testResultsPath: '$(System.DefaultWorkingDirectory)/test-results'
+  playwrightReportPath: '$(System.DefaultWorkingDirectory)/playwright-report'
+  # Environment variables
+  CI: true
+  PLAYWRIGHT_BROWSERS_PATH: 0
+  # Pipeline variables
+  vmImage: 'ubuntu-latest' # Options: 'ubuntu-latest', 'windows-latest', 'macos-latest'
+
+stages:
+  - stage: Build
+    displayName: 'Build and Setup'
+    jobs:
+      - job: Setup
+        displayName: 'Setup Environment'
+        pool:
+          vmImage: $(vmImage)
+        steps:
+          - checkout: self
+            displayName: 'Checkout Repository'
+
+          - task: NodeTool@0
+            displayName: 'Install Node.js'
+            inputs:
+              versionSpec: $(nodeVersion)
+
+          - task: Cache@2
+            displayName: 'Cache Node Modules'
+            inputs:
+              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              restoreKeys: |
+                npm | "$(Agent.OS)"
+              path: node_modules
+
+          - script: |
+              npm ci
+            displayName: 'Install Dependencies'
+
+          - script: |
+              npx playwright install --with-deps
+            displayName: 'Install Playwright Browsers'
+
+          - script: |
+              npm run clean
+            displayName: 'Clean Previous Test Results'
+
+  - stage: TestChromium
+    displayName: 'Test - Chromium Browser'
+    dependsOn: Build
+    jobs:
+      - job: ChromiumTests
+        displayName: 'Run Chromium Tests'
+        pool:
+          vmImage: $(vmImage)
+        steps:
+          - checkout: self
+            displayName: 'Checkout Repository'
+
+          - task: NodeTool@0
+            displayName: 'Install Node.js'
+            inputs:
+              versionSpec: $(nodeVersion)
+
+          - task: Cache@2
+            displayName: 'Restore Node Modules Cache'
+            inputs:
+              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              restoreKeys: |
+                npm | "$(Agent.OS)"
+              path: node_modules
+
+          - script: |
+              npm ci
+              npx playwright install chromium
+            displayName: 'Install Dependencies and Chromium'
+
+          - script: |
+              npm run test:chromium
+            displayName: 'Run Chromium Tests'
+            continueOnError: true
+
+          - task: PublishTestResults@2
+            displayName: 'Publish Test Results'
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '**/results.xml'
+              searchFolder: '$(testResultsPath)'
+              mergeTestResults: true
+              failTaskOnFailedTests: true
+              testRunTitle: 'Chromium Tests'
+
+          - task: PublishHtmlReport@1
+            displayName: 'Publish HTML Report'
+            condition: always()
+            inputs:
+              reportDir: '$(playwrightReportPath)'
+              tabName: 'Chromium Test Report'
+
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish Chromium Artifacts'
+            condition: always()
+            inputs:
+              targetPath: '$(testResultsPath)'
+              artifact: 'chromium-test-results'
+              publishLocation: 'pipeline'
+
+  - stage: TestFirefox
+    displayName: 'Test - Firefox Browser'
+    dependsOn: Build
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    jobs:
+      - job: FirefoxTests
+        displayName: 'Run Firefox Tests'
+        pool:
+          vmImage: $(vmImage)
+        steps:
+          - checkout: self
+            displayName: 'Checkout Repository'
+
+          - task: NodeTool@0
+            displayName: 'Install Node.js'
+            inputs:
+              versionSpec: $(nodeVersion)
+
+          - task: Cache@2
+            displayName: 'Restore Node Modules Cache'
+            inputs:
+              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              restoreKeys: |
+                npm | "$(Agent.OS)"
+              path: node_modules
+
+          - script: |
+              npm ci
+              npx playwright install firefox
+            displayName: 'Install Dependencies and Firefox'
+
+          - script: |
+              npm run test:firefox
+            displayName: 'Run Firefox Tests'
+            continueOnError: true
+
+          - task: PublishTestResults@2
+            displayName: 'Publish Test Results'
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '**/results.xml'
+              searchFolder: '$(testResultsPath)'
+              mergeTestResults: true
+              failTaskOnFailedTests: false
+              testRunTitle: 'Firefox Tests'
+
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish Firefox Artifacts'
+            condition: always()
+            inputs:
+              targetPath: '$(testResultsPath)'
+              artifact: 'firefox-test-results'
+              publishLocation: 'pipeline'
+
+  - stage: TestWebKit
+    displayName: 'Test - WebKit Browser'
+    dependsOn: Build
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    jobs:
+      - job: WebKitTests
+        displayName: 'Run WebKit Tests'
+        pool:
+          vmImage: $(vmImage)
+        steps:
+          - checkout: self
+            displayName: 'Checkout Repository'
+
+          - task: NodeTool@0
+            displayName: 'Install Node.js'
+            inputs:
+              versionSpec: $(nodeVersion)
+
+          - task: Cache@2
+            displayName: 'Restore Node Modules Cache'
+            inputs:
+              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              restoreKeys: |
+                npm | "$(Agent.OS)"
+              path: node_modules
+
+          - script: |
+              npm ci
+              npx playwright install webkit
+            displayName: 'Install Dependencies and WebKit'
+
+          - script: |
+              npm run test:webkit
+            displayName: 'Run WebKit Tests'
+            continueOnError: true
+
+          - task: PublishTestResults@2
+            displayName: 'Publish Test Results'
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '**/results.xml'
+              searchFolder: '$(testResultsPath)'
+              mergeTestResults: true
+              failTaskOnFailedTests: false
+              testRunTitle: 'WebKit Tests'
+
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish WebKit Artifacts'
+            condition: always()
+            inputs:
+              targetPath: '$(testResultsPath)'
+              artifact: 'webkit-test-results'
+              publishLocation: 'pipeline'
+
+  - stage: SmokeTests
+    displayName: 'Smoke Tests'
+    dependsOn: Build
+    condition: eq(variables['Build.Reason'], 'PullRequest')
+    jobs:
+      - job: SmokeTestsJob
+        displayName: 'Run Smoke Tests'
+        pool:
+          vmImage: $(vmImage)
+        steps:
+          - checkout: self
+            displayName: 'Checkout Repository'
+
+          - task: NodeTool@0
+            displayName: 'Install Node.js'
+            inputs:
+              versionSpec: $(nodeVersion)
+
+          - task: Cache@2
+            displayName: 'Restore Node Modules Cache'
+            inputs:
+              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              restoreKeys: |
+                npm | "$(Agent.OS)"
+              path: node_modules
+
+          - script: |
+              npm ci
+              npx playwright install chromium
+            displayName: 'Install Dependencies and Chromium'
+
+          - script: |
+              npm run test:smoke
+            displayName: 'Run Smoke Tests'
+            continueOnError: true
+
+          - task: PublishTestResults@2
+            displayName: 'Publish Smoke Test Results'
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '**/results.xml'
+              searchFolder: '$(testResultsPath)'
+              mergeTestResults: true
+              failTaskOnFailedTests: true
+              testRunTitle: 'Smoke Tests'
+
+  - stage: GenerateReport
+    displayName: 'Generate Final Report'
+    dependsOn: 
+      - TestChromium
+      - TestFirefox
+      - TestWebKit
+    condition: always()
+    jobs:
+      - job: FinalReport
+        displayName: 'Generate and Publish Final Report'
+        pool:
+          vmImage: $(vmImage)
+        steps:
+          - checkout: self
+            displayName: 'Checkout Repository'
+
+          - task: DownloadPipelineArtifact@2
+            displayName: 'Download All Test Results'
+            inputs:
+              buildType: 'current'
+              targetPath: '$(Pipeline.Workspace)'
+
+          - task: PublishHtmlReport@1
+            displayName: 'Publish Consolidated HTML Report'
+            condition: always()
+            inputs:
+              reportDir: '$(playwrightReportPath)'
+              tabName: 'Playwright Test Report'
+
+          - script: |
+              echo "Test execution completed!"
+              echo "Check the published reports for detailed results."
+            displayName: 'Pipeline Summary'
