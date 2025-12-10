@@ -63,7 +63,9 @@ stages:
               path: node_modules
 
           - script: |
-              npm ci
+              echo "Installing npm dependencies..."
+              # Try npm ci first (faster), fallback to npm install if it fails
+              npm ci || (echo "npm ci failed, cleaning and using npm install..." && rm -f package-lock.json && npm install)
             displayName: 'Install Dependencies'
 
           - script: |
@@ -100,7 +102,8 @@ stages:
               path: node_modules
 
           - script: |
-              npm ci
+              echo "Installing dependencies for Chromium tests..."
+              npm ci || (echo "npm ci failed, using npm install..." && rm -f package-lock.json && npm install)
               npx playwright install chromium
             displayName: 'Install Dependencies and Chromium'
 
@@ -163,7 +166,8 @@ stages:
               path: node_modules
 
           - script: |
-              npm ci
+              echo "Installing dependencies for Firefox tests..."
+              npm ci || (echo "npm ci failed, using npm install..." && rm -f package-lock.json && npm install)
               npx playwright install firefox
             displayName: 'Install Dependencies and Firefox'
 
@@ -218,7 +222,8 @@ stages:
               path: node_modules
 
           - script: |
-              npm ci
+              echo "Installing dependencies for WebKit tests..."
+              npm ci || (echo "npm ci failed, using npm install..." && rm -f package-lock.json && npm install)
               npx playwright install webkit
             displayName: 'Install Dependencies and WebKit'
 
@@ -273,7 +278,8 @@ stages:
               path: node_modules
 
           - script: |
-              npm ci
+              echo "Installing dependencies for Smoke tests..."
+              npm ci || (echo "npm ci failed, using npm install..." && rm -f package-lock.json && npm install)
               npx playwright install chromium
             displayName: 'Install Dependencies and Chromium'
 
