@@ -98,8 +98,8 @@ export default defineConfig({
         actionTimeout: process.env.CI ? 15000 : 10000,
         navigationTimeout: process.env.CI ? 45000 : 30000,
       },
-      // Skip WebKit tests if environment variable is set
-      testIgnore: process.env.SKIP_WEBKIT_TESTS ? ['**/*'] : [],
+      // Skip WebKit tests only if explicitly set to 'true'
+      testIgnore: process.env.SKIP_WEBKIT_TESTS === 'true' ? ['**/*'] : [],
     },
 
     /* Test against mobile viewports. */

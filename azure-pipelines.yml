@@ -243,7 +243,13 @@ stages:
               # Set WebKit-specific environment variables
               export WEBKIT_HEADLESS=1
               export WEBKIT_DISABLE_COMPOSITING_DEBUG_VISUALS=1
-              export DEBUG=pw:api
+              export SKIP_WEBKIT_TESTS=false
+              export BASE_URL=https://www.saucedemo.com
+              export CI=true
+              # List tests first to verify they are found
+              echo "Listing available WebKit tests..."
+              npx playwright test --project=webkit --list
+              echo "Running WebKit tests..."
               npm run test:webkit
             displayName: 'Run WebKit Tests'
             continueOnError: true
@@ -251,6 +257,9 @@ stages:
               # WebKit-specific environment variables
               WEBKIT_HEADLESS: 1
               WEBKIT_DISABLE_COMPOSITING_DEBUG_VISUALS: 1
+              SKIP_WEBKIT_TESTS: false
+              BASE_URL: https://www.saucedemo.com
+              CI: true
               # Increase memory limit
               NODE_OPTIONS: '--max-old-space-size=4096'
 
