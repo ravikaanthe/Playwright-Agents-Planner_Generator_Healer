@@ -83,13 +83,11 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         channel: 'chrome',
       },
-      testMatch: '**/*.spec.ts',
     },
 
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
-      testMatch: '**/*.spec.ts',
     },
 
     {
@@ -100,7 +98,6 @@ export default defineConfig({
         actionTimeout: process.env.CI ? 15000 : 10000,
         navigationTimeout: process.env.CI ? 45000 : 30000,
       },
-      testMatch: '**/*.spec.ts',
       // Skip WebKit tests if environment variable is set
       testIgnore: process.env.SKIP_WEBKIT_TESTS ? ['**/*'] : [],
     },
@@ -109,30 +106,18 @@ export default defineConfig({
     {
       name: 'Mobile Chrome',
       use: { ...devices['Pixel 5'] },
-      testMatch: '**/responsive/*.spec.ts',
+      testMatch: ['**/responsive/*.spec.ts'],
     },
     {
       name: 'Mobile Safari',
       use: { ...devices['iPhone 12'] },
-      testMatch: '**/responsive/*.spec.ts',
+      testMatch: ['**/responsive/*.spec.ts'],
     },
 
     /* Test against branded browsers. */
     {
       name: 'Microsoft Edge',
       use: { ...devices['Desktop Edge'], channel: 'msedge' },
-      testMatch: '**/*.spec.ts',
-    },
-    
-    // Smoke tests configuration
-    {
-      name: 'smoke-chromium',
-      use: { 
-        ...devices['Desktop Chrome'],
-        channel: 'chrome',
-      },
-      testMatch: '**/*.spec.ts',
-      grep: /@smoke/,
     },
   ],
 

@@ -6,13 +6,14 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Environment variables
-.env
+# Environment variables (keep .env.example for reference)
+# .env  # Commented out to allow committing .env file
 .env.local
 .env.*.local
 .env.production
 .env.staging
 .env.development
+!.env.example
 
 # Enterprise output
 enterprise-output/
@@ -44,8 +45,12 @@ azure-pipelines-*.yml
 pipeline-artifacts/
 .vsts/
 
-# Visual Studio / VS Code
-.vscode/
+# Visual Studio / VS Code (allow essential config files)
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/extensions.json
+.vscode/*.code-workspace
 .vs/
 *.suo
 *.user
@@ -122,8 +127,12 @@ storybook-static/
 local.settings.json
 Thumbs.db
 
-# IDE
-.vscode/
+# IDE (allow essential workspace configurations)
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/extensions.json
+.vscode/*.code-workspace
 .idea/
 *.swp
 *.swo
