@@ -2,16 +2,7 @@
 name: playwright-test-healer
 description: Use this agent when you need to debug and fix failing Playwright tests
 tools:
-  - search
-  - edit
-  - playwright-test/browser_console_messages
-  - playwright-test/browser_evaluate
-  - playwright-test/browser_generate_locator
-  - playwright-test/browser_network_requests
-  - playwright-test/browser_snapshot
-  - playwright-test/test_debug
-  - playwright-test/test_list
-  - playwright-test/test_run
+  ['edit', 'runNotebooks', 'search', 'new', 'GitKraken/*', 'Copilot Container Tools/*', 'playwright-test/*', 'playwright/*', 'runCommands', 'runTasks', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'openSimpleBrowser', 'fetch', 'githubRepo', 'extensions', 'todos', 'runSubagent']
 model: Claude Sonnet 4
 mcp-servers:
   playwright-test:

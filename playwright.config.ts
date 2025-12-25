@@ -106,12 +106,12 @@ export default defineConfig({
     {
       name: 'Mobile Chrome',
       use: { ...devices['Pixel 5'] },
-      testMatch: ['**/responsive/*.spec.ts'],
+      //testMatch: ['**/responsive/*.spec.ts'],
     },
     {
       name: 'Mobile Safari',
       use: { ...devices['iPhone 12'] },
-      testMatch: ['**/responsive/*.spec.ts'],
+      //testMatch: ['**/responsive/*.spec.ts'],
     },
 
     /* Test against branded browsers. */
